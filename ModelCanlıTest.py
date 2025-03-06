@@ -19,16 +19,24 @@ def extract_features_from_audio(audio, sr, n_mfcc=40):
     mfcc_mean = np.mean(mfcc.T, axis=0)
     return mfcc_mean
 
-# Modeli, custom_objects içinde 'mse' olarak MeanSquaredError() nesnesini vererek yüklüyoruz.
-model = load_model("voice_autoencoder.h5", custom_objects={'mse': tf.keras.losses.MeanSquaredError()})
+# Sınıflandırma modelini yükleme
+model = load_model("voice_classification_model.h5")
 
-# Scaler'ı yükleme
+# Scaler ve label_map'i yükleme
 with open("scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
+with open("label_map.pkl", "rb") as f:
+    label_map = pickle.load(f)
 
-# Eğitim sırasında kaydedilmiş threshold'u yükleyelim
-with open("threshold.pkl", "rb") as f:
-    threshold = pickle.load(f)
+# label_map'in tersini oluşturuyoruz: indeks -> sınıf adı
+inv_label_map = {v: k for k, v in label_map.items()}
+
+# İstediğiniz isim eşlemesi: Eğer model "Kisi1" çıkarsa "enes", "Kisi2" için "Semih", "Kisi3" için "Hüseyin"
+name_mapping = {
+    "Kisi1": "enes",
+    "Kisi2": "Semih",
+    "Kisi3": "Hüseyin"
+}
 
 # Mikrofon ile ses kaydı alıyoruz
 duration = 5  # Kaydın süresi (saniye)
@@ -39,13 +47,15 @@ features = extract_features_from_audio(audio, sr=fs, n_mfcc=40)
 features = np.expand_dims(features, axis=0)
 features_scaled = scaler.transform(features)
 
-# Model ile yeniden oluşturma (reconstruction) işlemi
-reconstructed = model.predict(features_scaled)
-error = np.mean(np.square(features_scaled - reconstructed))
-print("Reconstruction error:", error)
+# Model ile tahmin yapma
+predictions = model.predict(features_scaled)
+predicted_index = np.argmax(predictions, axis=1)[0]
+confidence = np.max(predictions)
 
-# Hesaplanan threshold ile karşılaştırma
-if error < threshold:
-    print("Test sesi kabul edildi: reconstruction error eşik değerinin altında.")
-else:
-    print("Test sesi reddedildi: reconstruction error eşik değerinin üzerinde.")
+# Modelin tahmin ettiği sınıf adını alıp, isim eşlemesini uyguluyoruz
+predicted_class = inv_label_map[predicted_index]
+mapped_name = name_mapping.get(predicted_class, predicted_class)
+
+print("Tahmin Edilen Sınıf:", predicted_class)
+print("Eşleştirilmiş İsim:", mapped_name)
+print("Güven:", confidence)

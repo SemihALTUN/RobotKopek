@@ -4,35 +4,38 @@ import pickle
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 
-# MFCC çıkarım fonksiyonu
 def extract_features(file_path, n_mfcc=40):
+    """
+    Verilen ses dosyasından 40 adet MFCC çıkarır ve zaman ortalamasını alır.
+    """
     y, sr = librosa.load(file_path, sr=16000)
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=n_mfcc)
     mfcc_mean = np.mean(mfcc.T, axis=0)
     return mfcc_mean
 
-# Modeli yüklerken, custom_objects içinde 'mse' olarak MeanSquaredError() nesnesini veriyoruz.
-model = load_model("voice_autoencoder.h5", custom_objects={'mse': tf.keras.losses.MeanSquaredError()})
-
-# Scaler'ı yükleme
+# Modeli, scaler'ı ve label_map'i yükleyelim.
+model = load_model("voice_classification_model.h5")
 with open("scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
+with open("label_map.pkl", "rb") as f:
+    label_map = pickle.load(f)
 
-# Test ses dosyasını işleme
-test_file = "benim_sesim.wav"  # Test için kullanmak istediğiniz ses dosyası
+# Label_map'in tersini oluşturuyoruz: indeks -> sınıf adı.
+inv_label_map = {v: k for k, v in label_map.items()}
+
+# Test ses dosyasının yolunu belirleyelim.
+test_file = "C:\\Users\\semii\\OneDrive\\Masaüstü\\RobotKöpek\\Test_Data\\Kisi3\\HüseyinSes.wav"
+
+# MFCC özelliklerini çıkaralım ve normalize edelim.
 features = extract_features(test_file, n_mfcc=40)
 features = np.expand_dims(features, axis=0)
 features_scaled = scaler.transform(features)
 
-# Model ile yeniden oluşturma (reconstruction) işlemi
-reconstructed = model.predict(features_scaled)
-error = np.mean(np.square(features_scaled - reconstructed))
-print("Reconstruction error:", error)
+# Model ile tahmin yapalım.
+predictions = model.predict(features_scaled)
+predicted_index = np.argmax(predictions, axis=1)[0]
+predicted_class = inv_label_map[predicted_index]
+confidence = np.max(predictions)
 
-# Önceden eğitim sırasında belirlediğiniz eşik değeri (threshold)
-threshold = 0.5  # Bu değeri eğitim sırasında hesapladığınız threshold ile değiştirin
-
-if error < threshold:
-    print("Test sesi kabul edildi: reconstruction error eşik değerinin altında.")
-else:
-    print("Test sesi reddedildi: reconstruction error eşik değerinin üzerinde.")
+print("Tahmin Edilen Sınıf:", predicted_class)
+print("Güven:", confidence)

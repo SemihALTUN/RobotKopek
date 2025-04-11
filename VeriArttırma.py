@@ -4,8 +4,8 @@ import soundfile as sf
 from audiomentations import AddGaussianNoise, TimeStretch, PitchShift
 
 # Giriş ve çıkış dizinlerini belirleyin
-input_dir = "C:\\Users\\semii\\OneDrive\\Masaüstü\\RobotKöpek\\Hüseyin"  # Orijinal ses dosyalarınızın bulunduğu dizin
-output_dir = "C:\\Users\\semii\\OneDrive\\Masaüstü\\RobotKöpek\\HüseyinVeriArttırma"  # Artırılmış ses dosyalarının kaydedileceği dizin
+input_dir = "C:\\Users\\semii\\OneDrive\\Masaüstü\\RobotKöpek\\Data"  # Orijinal ses dosyalarınızın bulunduğu dizin
+output_dir = "C:\\Users\\semii\\OneDrive\\Masaüstü\\RobotKöpek\\VeriArttırma"  # Artırılmış ses dosyalarının kaydedileceği dizin
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
